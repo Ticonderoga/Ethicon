@@ -167,22 +167,22 @@ if __name__ == '__main__':
     ts4=loaddata(file_exp,(6,7)) 
 
     time_final_ts1=ts1[-1,0]
-    time_ts1=np.arange(0,time_final_ts1,600.)
+    time_ts1=np.arange(0,time_final_ts1,60.)
     mass_flux1=interpdata(ts1,time_ts1,derivation=1) 
     np.savetxt('mass_flux1.dat',np.c_[time_ts1,mass_flux1],header="time [s],mass_flux")
     
     time_final_ts2=ts2[-1,0]
-    time_ts2=np.arange(0,time_final_ts2,600.)    
+    time_ts2=np.arange(0,time_final_ts2,60.)    
     mass_flux2=interpdata(ts2,time_ts2,derivation=1)
     np.savetxt('mass_flux2.dat',np.c_[time_ts2,mass_flux2],header="time [s],mass_flux")
 
     time_final_ts3=ts3[-1,0]
-    time_ts3=np.arange(0,time_final_ts3,600.)
+    time_ts3=np.arange(0,time_final_ts3,60.)
     mass_flux3=interpdata(ts3,time_ts3,derivation=1) 
     np.savetxt('mass_flux3.dat',np.c_[time_ts3,mass_flux3],header="time [s],mass_flux")
 
     time_final_ts4=ts4[-1,0]
-    time_ts4=np.arange(0,time_final_ts4,600.)
+    time_ts4=np.arange(0,time_final_ts4,60.)
     mass_flux4=interpdata(ts4,time_ts4,derivation=1) 
     np.savetxt('mass_flux4.dat',np.c_[time_ts4,mass_flux4],header="time [s],mass_flux")
     
