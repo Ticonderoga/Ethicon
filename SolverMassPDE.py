@@ -173,7 +173,7 @@ if __name__ == '__main__':
     
     time_final_ts2=ts2[-1,0]
     time_ts2=np.arange(0,time_final_ts2,600.)    
-    mass_flux2=interpdata(ts2,time_ts2,derivation=1) 
+    mass_flux2=interpdata(ts2,time_ts2,derivation=1)
     np.savetxt('mass_flux2.dat',np.c_[time_ts2,mass_flux2],header="time [s],mass_flux")
 
     time_final_ts3=ts3[-1,0]
@@ -196,7 +196,7 @@ if __name__ == '__main__':
     print 30*"="
     plt.close('all')
     Material = ImportData(file_in)
-#    Conditions = ImportData(file_cond)
+    Conditions = ImportData(file_cond)
     
     x,dx=np.linspace(0,Material.Size.height,Material.Size.number,retstep=True)
     time=np.arange(0,Conditions.Time.final+Conditions.Time.step,Conditions.Time.step)
@@ -230,4 +230,4 @@ if __name__ == '__main__':
     plt.ylabel(r"Water\ Content $\left[kg \cdot m^{-3}\ or\ \%\right]$")
     plt.legend()
     plt.grid(True)
-    plt.plot(ts2.index/3600,ts2.values)
+#    plt.plot(ts2.index/3600,ts2.values)
