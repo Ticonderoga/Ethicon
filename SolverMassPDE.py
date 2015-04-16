@@ -27,13 +27,25 @@ import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
 
-
+def sorptionX_aw(a,C,Xm) :
+    return Xm*(C*a/(1.+C*a)+a/(1.-a))
+    
 
 if __name__ == '__main__':
     
     file_in='Ethicon.cfg'
     file_cond='Conditions.cfg'
+    file_exp='Result_Sorption.csv'
+    Exper=pd.read_csv(file_exp,header=0)
+    ts1 = Exper.ix[:,0:2].dropna().values
+#    plt.plot(ts1[:,0]/3600,ts1[:,1])
+    ts2 = Exper.ix[:,2:4].dropna().values
     
+    ts3 = Exper.ix[:,4:6].dropna().values
+#    plt.plot(ts3[:,0]/3600,ts3[:,1])
+    ts4 = Exper.ix[:,6:8].dropna().values
+#    plt.plot(ts4[:,0]/3600,ts4[:,1])
+
     plt.close('all')
     print 30*"="
     print ""
@@ -47,11 +59,11 @@ if __name__ == '__main__':
     x,dx=np.linspace(0,Material.Size.height,Material.Size.number,retstep=True)
     time=np.arange(0,Conditions.Time.final+Conditions.Time.step,Conditions.Time.step)
     
-    Cinit=Material.Mass.Conc_init*np.ones_like(x)
+    Xinit=Material.Mass.X_init*np.ones_like(x)
     nbsavet=int(Conditions.Time.final / Conditions.Time.interval_savet)+1
     
-    SaveC=np.empty((nbsavet,Material.Size.number))
-    SaveC[0,:]=Cinit
+    SaveX=np.empty((nbsavet,Material.Size.number))
+    SaveX[0,:]=Xinit
     
     Fo=Material.Mass.diffusivity*Conditions.Time.step/dx**2
     Vect_m=-Fo*np.ones(Material.Size.number-1)
@@ -63,33 +75,40 @@ if __name__ == '__main__':
     Vect[-1]=1.
     
     alpha,beta=Ant.Thomas_alpha_beta(Vect_m,Vect,Vect_p)
-    Csurf=Conditions.Gaz.humidity(time)
+#    HR=Conditions.Gaz.humidity(time)
+    Xm=0.03398551582055446
+    CL=10.906023000635287
+    Xfinal = ts2[-1,1]
+    fopt= lambda x : Xfinal-sorptionX_aw(x,CL,Xm)
+    HRsurf=sp.optimize.fsolve(fopt,0.2)[0]
+    Xsurf=sorptionX_aw(HRsurf*np.ones_like(time),CL,Xm)
     n=0    
-    C=Cinit
+    X=Xinit
     for p in xrange(len(time)-1) :
-        rhs=C
-        rhs[0]=Csurf[p+1]
+        rhs=X
+        rhs[0]=Xsurf[p+1]
         rhs[-1]=0
-        C=Ant.Thomas_x(Ant.Thomas_y(beta,rhs),alpha,Vect_p)
+        X=Ant.Thomas_x(Ant.Thomas_y(beta,rhs),alpha,Vect_p)
         if ((p+1)%int(Conditions.Time.interval_savet/Conditions.Time.step))==0 :
             n=n+1
             print "======================"
             print "Iteration %d - Temps %.5g" %(p,(p+1)*Conditions.Time.step)
-            SaveC[n,:]=C
+            SaveX[n,:]=X
     
     
     savetime=np.arange(0,nbsavet*Conditions.Time.interval_savet,Conditions.Time.interval_savet)
-    plt.figure(1)    
+    plt.figure(1)
     plt.xlabel(r"Distance $\left[mm\right]$")
     plt.ylabel(r"Water\ Content $\left[kg \cdot m^{-3} \right]$")
     plt.grid(True)
-    plt.plot(x*1e3,SaveC.T)
+    plt.plot(x*1e3,SaveX.T)
 #    plt.legend()
     plt.grid(True)
     plt.figure(2)
-    plt.plot(savetime/3600,SaveC.mean(axis=1),label=r"C_{mean}")
-    plt.plot(time/3600,Csurf,label=r'RH')
+    plt.plot(savetime/3600,SaveX.mean(axis=1),label=r"X_{mean}")
+    plt.plot(time/3600,Xsurf,label=r'$X_{surf}$')
     plt.xlabel(r"Time $\left[h\right]$")
     plt.ylabel(r"Water\ Content $\left[kg \cdot m^{-3}\ or\ \%\right]$")
     plt.legend()
     plt.grid(True)
+    plt.plot(ts2[:,0]/3600,ts2[:,1])
