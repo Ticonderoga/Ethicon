@@ -43,11 +43,17 @@ def simul_num(Mat,Cond):
     Vect_m=-Fo*np.ones(Mat.Size.number-1)
     Vect_p=-Fo*np.ones(Mat.Size.number-1)
     Vect=1+2*Fo*np.ones(Mat.Size.number)
-    Vect[0]=1.
-    Vect_p[0]=0.
-    Vect_m[-1]=-1.
-    Vect[-1]=1.
-    
+    if Cond.BC.physics=='fixed' :
+        Vect[0]=1.
+        Vect_p[0]=0.
+        Vect_m[-1]=-1.
+        Vect[-1]=1.
+    elif Cond.BC.physics=='flux' :
+        Vect[0]=1.
+        Vect_p[0]=-1.
+        Vect_m[-1]=-1.
+        Vect[-1]=1.
+       
     alpha,beta=Ant.Thomas_alpha_beta(Vect_m,Vect,Vect_p)
 #    HR=Cond.Gaz.humidity(time)
     Xsurf=sorptionX_aw(0.2*np.ones_like(time),CL,Xm)
@@ -55,7 +61,11 @@ def simul_num(Mat,Cond):
     X=Xinit
     for p in xrange(len(time)-1) :
         rhs=X
-        rhs[0]=Xsurf[p+1]
+        if Cond.BC.physics=='fixed' :
+            rhs[0]=Xsurf[p+1]
+        elif Cond.BC.physics=='flux' :
+            rhs[0]=Xsurf[p+1]
+            
         rhs[-1]=0
         X=Ant.Thomas_x(Ant.Thomas_y(beta,rhs),alpha,Vect_p)
         if ((p+1)%int(Cond.Time.interval_savet/Cond.Time.step))==0 :
@@ -84,7 +94,7 @@ if __name__ == '__main__':
     plt.close('all')
     Material = ImportData(file_in)
     Conditions = ImportData(file_cond)
-    
+
     x,dx=np.linspace(0,Material.Size.height,Material.Size.number,retstep=True)
     time=np.arange(0,Conditions.Time.final+Conditions.Time.step,Conditions.Time.step)
     
@@ -94,7 +104,7 @@ if __name__ == '__main__':
 #    fopt= lambda x : Xfinal-sorptionX_aw(x,CL,Xm)
 #    HRsurf=sp.optimize.fsolve(fopt,0.2)[0]
     savetime,SaveX = simul_num(Material,Conditions)
-
+    
     plt.figure(1)
     plt.xlabel(r"Distance $\left[mm\right]$")
     plt.ylabel(r"Water\ Content $\left[kg \cdot m^{-3} \right]$")
