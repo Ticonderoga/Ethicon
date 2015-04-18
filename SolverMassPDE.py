@@ -43,16 +43,16 @@ def simul_num(Mat,Cond):
     Fo=Mat.Mass.diffusivity*Cond.Time.step/dx**2
     Vect_m=-Fo*np.ones(Mat.Size.number-1)
     Vect_p=-Fo*np.ones(Mat.Size.number-1)
-    Vect=1+2*Fo*np.ones(Mat.Size.number)
-    f= Mat.Mass.diffusivity*Mat.Size.area/dx*Cond.Time.step
+    Vect=1.+2*Fo*np.ones(Mat.Size.number)
+#    f= Mat.Mass.diffusivity*Mat.Size.area/dx*Cond.Time.step
     if Cond.BC.physics=='fixed' :
         Vect[0]=1.
         Vect_p[0]=0.
     elif Cond.BC.physics=='flux' :
 #        Vect[0]=-1.
 #        Vect_p[0]=1.
-        Vect[0]=1.+f
-        Vect_p[0]=-f
+        Vect[0]=1.+2*Fo
+        Vect_p[0]=-2*Fo
 
     Vect_m[-1]=-1.
     Vect[-1]=1.
@@ -70,7 +70,8 @@ def simul_num(Mat,Cond):
         elif Cond.BC.physics=='flux' :
 #            rhs[0]=-Cond.BC.values((p+1)*Cond.Time.step)/Mat.Size.area/Mat.Mass.diffusivity*dx
 #            rhs[0]=-Cond.BC.values((p+1)*Cond.Time.step)/Mat.Size.area/Mat.Mass.diffusivity*dx*Mat.Mass.DM
-            rhs[0]=rhs[0]+Cond.BC.values((p+1)*Cond.Time.step)*Mat.Mass.DM*Cond.Time.step
+            rhs[0]=rhs[0]+2*Cond.BC.values((p+1)*Cond.Time.step)\
+                *1e-3*Cond.Time.step/Mat.Size.area/dx
                         
         rhs[-1]=0
         X=Ant.Thomas_x(Ant.Thomas_y(beta,rhs),alpha,Vect_p)
@@ -90,7 +91,7 @@ if __name__ == '__main__':
     
     file_in='Ethicon-4x4.cfg'
     file_cond='Conditions-4x4.cfg'
-    file_exp='Result_Charge.csv'
+    file_exp='Result_Sorption_brut.csv'
 
 #    ts1=loaddata(file_exp,(0,1)) 
 #    ts2=loaddata(file_exp,(2,3)) 
@@ -130,17 +131,17 @@ if __name__ == '__main__':
     plt.grid(True)
 
     plt.figure(2)
-    plt.plot(savetime/3600,SaveX.mean(axis=1),label=r"\bar{X}")
-    plt.plot(savetime/3600,SaveX[:,0],label=r'$X_{surf}$')
-    plt.plot(ts3[:,0]/3600,ts3[:,1]*Material.Mass.DM/Material.Size.volume,'bo-',label=r'$\bar{X}_{exp}$')
+    plt.plot(savetime/3600,SaveX.mean(axis=1),'b-',label=r"\bar{X}")
+    plt.plot(savetime/3600,SaveX[:,0],'g-',label=r'$X_{surf}$')
+    plt.plot(ts3[:,0]/3600,(ts3[:,1]-ts3[0,1])*1e-3/Material.Size.volume,'bo',label=r'$\bar{X}_{exp}$')
     plt.xlabel(r"Time $\left[h\right]$")
     plt.ylabel(r"Water\ Content $\left[kg \cdot m^{-3}\right]$")
     plt.title(r"Water content vs. time")
-
     plt.legend()
     plt.grid(True)
-    plt.figure(3)
-    plt.plot(savetime/3600,Conditions.BC.values(savetime)*Material.Mass.DM/Material.Size.volume)
-    plt.xlabel(r"Time $\left[h\right]$")
-    plt.ylabel(r"mass flux$")
-    plt.title(r"Mass flux vs. time")
+
+#    plt.figure(3)
+#    plt.plot(savetime/3600,Conditions.BC.values(savetime)*1e-3/Material.Size.volume)
+#    plt.xlabel(r"Time $\left[h\right]$")
+#    plt.ylabel(r"mass flux$")
+#    plt.title(r"Mass flux vs. time")

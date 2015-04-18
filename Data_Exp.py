@@ -117,7 +117,7 @@ def interpdata(ts,timeint,derivation=0) :
 
 if __name__ == '__main__':
     
-    file_exp='Result_Charge.csv'
+    file_exp='Result_Sorption_brut.csv'
 
     ts1=loaddata(file_exp,(0,1)) 
     ts2=loaddata(file_exp,(2,3)) 
@@ -127,20 +127,20 @@ if __name__ == '__main__':
     time_final_ts1=ts1[-1,0]
     time_ts1=np.arange(0,time_final_ts1,60.)
     mass_flux1=interpdata(ts1,time_ts1,derivation=1) 
-    np.savetxt('mass_flux1.dat',np.c_[time_ts1,mass_flux1],header="time [s],mass_flux")
+    np.savetxt('mass_flux1.dat',np.c_[time_ts1,mass_flux1],header="time [s],mass_flux [gH2O/s]")
     
     time_final_ts2=ts2[-1,0]
     time_ts2=np.arange(0,time_final_ts2,60.)    
     mass_flux2=interpdata(ts2,time_ts2,derivation=1)
-    np.savetxt('mass_flux2.dat',np.c_[time_ts2,mass_flux2],header="time [s],mass_flux")
+    np.savetxt('mass_flux2.dat',np.c_[time_ts2,mass_flux2],header="time [s],mass_flux [gH2O/s]")
 
     time_final_ts3=ts3[-1,0]
     time_ts3=np.arange(0,time_final_ts3,60.)
     mass_flux3=interpdata(ts3,time_ts3,derivation=1) 
-    np.savetxt('mass_flux3.dat',np.c_[time_ts3,mass_flux3],header="time [s],mass_flux")
+    np.savetxt('mass_flux3.dat',np.c_[time_ts3,mass_flux3],header="time [s],mass_flux [gH2O/s]")
 
     time_final_ts4=ts4[-1,0]
     time_ts4=np.arange(0,time_final_ts4,60.)
     mass_flux4=interpdata(ts4,time_ts4,derivation=1) 
-    np.savetxt('mass_flux4.dat',np.c_[time_ts4,mass_flux4],header="time [s],mass_flux")
+    np.savetxt('mass_flux4.dat',np.c_[time_ts4,mass_flux4],header="time [s],mass_flux [gH2O/s]s")
 
