@@ -28,7 +28,10 @@ import scipy as sp
 import matplotlib.pyplot as plt
 import scipy.interpolate as scinterp
 from Data_Exp import *
- 
+import time 
+import matplotlib.cm as mplcm
+import matplotlib.colors as colors
+
 def sorptionX_aw(a,C,Xm) :
     return Xm*(C*a/(1.+C*a)+a/(1.-a))
     
@@ -58,8 +61,13 @@ def simul_num(Mat,Cond):
     Vect[-1]=1.
        
     alpha,beta=Ant.Thomas_alpha_beta(Vect_m,Vect,Vect_p)
-#    HR=Cond.Gaz.humidity(time)
-#    Xsurf=sorptionX_aw(0.2*np.ones_like(time),CL,Xm)
+ 
+    if Cond.BC.physics=='fixed' :
+        Xm=0.03398551582055446
+        CL=10.906023000635287
+        HR=Cond.Gaz.humidity(time)
+        Xsurf=sorptionX_aw(HR,CL,Xm)*Mat.Mass.DM/Mat.Size.volume
+
     n=0    
     X=Xinit
 
@@ -68,8 +76,6 @@ def simul_num(Mat,Cond):
         if Cond.BC.physics=='fixed' :
             rhs[0]=Xsurf[p+1]
         elif Cond.BC.physics=='flux' :
-#            rhs[0]=-Cond.BC.values((p+1)*Cond.Time.step)/Mat.Size.area/Mat.Mass.diffusivity*dx
-#            rhs[0]=-Cond.BC.values((p+1)*Cond.Time.step)/Mat.Size.area/Mat.Mass.diffusivity*dx*Mat.Mass.DM
             rhs[0]=rhs[0]+2*Cond.BC.values((p+1)*Cond.Time.step)\
                 *1e-3*Cond.Time.step/Mat.Size.area/dx
                         
@@ -86,19 +92,14 @@ def simul_num(Mat,Cond):
     
     return savetime,SaveX
 
+def create_colors(n,p=2,colormap='jet') :
+    cm = plt.get_cmap(colormap)
+    cNorm  = colors.PowerNorm(p,vmin=0, vmax=n-1)
+    scalarMap = mplcm.ScalarMappable(norm=cNorm, cmap=cm)
+    L=[scalarMap.to_rgba(i) for i in range(n)]
+    return L
 
 if __name__ == '__main__':
-    
-    file_in='Ethicon-4x4.cfg'
-    file_cond='Conditions-4x4.cfg'
-    file_exp='Result_Sorption_brut.csv'
-
-#    ts1=loaddata(file_exp,(0,1)) 
-#    ts2=loaddata(file_exp,(2,3)) 
-    ts3=loaddata(file_exp,(4,5)) 
-#    ts4=loaddata(file_exp,(6,7)) 
-
-
     plt.close('all')
     print 30*"="
     print ""
@@ -107,18 +108,52 @@ if __name__ == '__main__':
     print 30*"="
     print ""    
     
-    plt.close('all')
-    Material = ImportData(file_in)
+    file_in='Ethicon-4x4.cfg'
+    file_cond='Conditions-4x4.cfg'
+
     Conditions = ImportData(file_cond)
+    Material = ImportData(file_in)
+    
     Material.Size.volume = Material.Size.length * Material.Size.width * Material.Size.height
     Material.Size.area = Material.Size.length * Material.Size.width 
     
+
+
+    compare_exp = True
+    typeExp = "Charge"
+    
+    if compare_exp == True :
+        if typeExp=="Charge" :
+            file_exp='Result_Sorption_brut.csv'
+#            data_exp=loaddata(file_exp,(0,1)) 
+#            data_exp=loaddata(file_exp,(2,3))  # mass flux2
+            data_exp=loaddata(file_exp,(4,5)) # mass flux3 
+#            data_exp=loaddata(file_exp,(6,7)) 
+            Material.Mass.X_init=0            
+        elif typeExp=="DisCharge" :            
+            file_exp='Result_DisCharge.csv'
+            data_exp=loaddata(file_exp,(0,1)) 
+            Material.Mass.X_init=(data_exp[0,-1]*1e-3-Material.Mass.DM)/Material.Size.volume
+            
+        Conditions.Time.final = np.floor(data_exp[-1,0]/Conditions.Time.interval_savet)*Conditions.Time.interval_savet
+            
+        print "Boundary condition : ",Conditions.BC.physics
+        if Conditions.BC.physics == 'flux' :
+            print "Source of flux in : ",Conditions.BC.values_filename
+            answer=raw_input("Do you want to continue [y/n] : ")            
+            while answer.upper()== "N" :                
+                print ""    
+                print 30*"="
+                print ""   
+                print "Type Ctrl-C to exit"
+                print ""
+                print 30*"="
+                print ""
+                time.sleep(1)
+                
+            
     x,dx=np.linspace(0,Material.Size.height,Material.Size.number,retstep=True)
     time=np.arange(0,Conditions.Time.final+Conditions.Time.step,Conditions.Time.step)
-
-#    values for sorption Isotherm    
-#    Xm=0.03398551582055446
-#    CL=10.906023000635287
     
     savetime,SaveX = simul_num(Material,Conditions)
     
@@ -126,22 +161,41 @@ if __name__ == '__main__':
     plt.xlabel(r"Distance $\left[mm\right]$")
     plt.ylabel(r"Water\ Content $\left[kg \cdot m^{-3} \right]$")
     plt.grid(True)
-    plt.plot(x*1e3,SaveX.T)
-    plt.title(r"Water content profiles")
+    Lcolors=create_colors(len(savetime),p=0.1,colormap='jet')
+    for i,c in zip(range(len(savetime)),Lcolors):
+        plt.plot(x*1e3,SaveX.T[:,i],color=c)
+    head_title=r"Water content profiles every "+str(int(Conditions.Time.interval_savet))+" s"
+    head_title=head_title+"\n Mass diffusivity : D = "+str(Material.Mass.diffusivity)+r" $m^{2} \cdot s^{-1}$"
+    plt.title(head_title)
     plt.grid(True)
 
     plt.figure(2)
-    plt.plot(savetime/3600,SaveX.mean(axis=1),'b-',label=r"\bar{X}")
-    plt.plot(savetime/3600,SaveX[:,0],'g-',label=r'$X_{surf}$')
-    plt.plot(ts3[:,0]/3600,(ts3[:,1]-ts3[0,1])*1e-3/Material.Size.volume,'bo',label=r'$\bar{X}_{exp}$')
+    if compare_exp and typeExp=="Charge" :
+        plt.plot(data_exp[:,0]/3600,(data_exp[:,1]-data_exp[0,1])*1e-3/Material.Size.volume,ls='None',\
+            marker='o',mec='blue',mfc='white',label=r'$\bar{C}_{exp}$')
+    elif compare_exp and typeExp=="DisCharge" :
+        plt.plot(data_exp[:,0]/3600,(data_exp[:,1]*1e-3-Material.Mass.DM)/Material.Size.volume,ls='None',\
+            marker='o',mec='blue',mfc='white',label=r'$\bar{C}_{exp}$')
+        
+    plt.plot(savetime/3600,SaveX.mean(axis=1),'k-',linewidth=3,label=r"\bar{C}^{simul}")
+    plt.plot(savetime/3600,SaveX[:,0],'g-',label=r'$C^{simul}_{surf}$')
+    plt.plot(savetime/3600,SaveX[:,-1],'r-',label=r'$C^{simul}_{deep}$')
+    
+    
     plt.xlabel(r"Time $\left[h\right]$")
     plt.ylabel(r"Water\ Content $\left[kg \cdot m^{-3}\right]$")
     plt.title(r"Water content vs. time")
     plt.legend()
     plt.grid(True)
-
-#    plt.figure(3)
-#    plt.plot(savetime/3600,Conditions.BC.values(savetime)*1e-3/Material.Size.volume)
-#    plt.xlabel(r"Time $\left[h\right]$")
-#    plt.ylabel(r"mass flux$")
-#    plt.title(r"Mass flux vs. time")
+    
+    sauvegarde = True
+    directory="./Resultats/"
+    
+    if sauvegarde==True :
+        plt.figure(1)
+        fname1="Figure_1_"+str(Material.Mass.diffusivity)+".pdf"
+        plt.savefig(directory+fname1)
+        plt.figure(2)
+        fname2="Figure_2_"+str(Material.Mass.diffusivity)+".pdf"
+        plt.savefig(directory+fname2)
+        
