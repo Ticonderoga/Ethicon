@@ -32,7 +32,8 @@ import time
 import matplotlib.cm as mplcm
 import matplotlib.colors as colors
 
-def sorptionX_aw(a,C,Xm) :
+def sorptionX_aw(RH,C,Xm) :
+    a=RH/100
     return Xm*(C*a/(1.+C*a)+a/(1.-a))
     
 def simul_num(Mat,Cond):
@@ -47,13 +48,11 @@ def simul_num(Mat,Cond):
     Vect_m=-Fo*np.ones(Mat.Size.number-1)
     Vect_p=-Fo*np.ones(Mat.Size.number-1)
     Vect=1.+2*Fo*np.ones(Mat.Size.number)
-#    f= Mat.Mass.diffusivity*Mat.Size.area/dx*Cond.Time.step
+
     if Cond.BC.physics=='fixed' :
         Vect[0]=1.
         Vect_p[0]=0.
     elif Cond.BC.physics=='flux' :
-#        Vect[0]=-1.
-#        Vect_p[0]=1.
         Vect[0]=1.+2*Fo
         Vect_p[0]=-2*Fo
 
@@ -83,7 +82,7 @@ def simul_num(Mat,Cond):
         X=Ant.Thomas_x(Ant.Thomas_y(beta,rhs),alpha,Vect_p)
         if ((p+1)%int(Cond.Time.interval_savet/Cond.Time.step))==0 :
             n=n+1
-            print "======================"
+            print "--------------------------------------"
             print "Iteration %d - Temps %.5g" %(p,(p+1)*Cond.Time.step)
             SaveX[n,:]=X
     
@@ -99,6 +98,21 @@ def create_colors(n,p=2,colormap='jet') :
     L=[scalarMap.to_rgba(i) for i in range(n)]
     return L
 
+def catch_final_time(val,Cond):
+    return np.floor(val/Cond.Time.interval_savet)*Cond.Time.interval_savet
+
+def continuation():
+    answer=raw_input("Do you want to continue [y/n] : ")            
+    while answer.upper()== "N" :                
+        print ""    
+        print 30*"="
+        print ""   
+        print "Type Ctrl-C to exit"
+        print ""
+        print 30*"="
+        print ""
+        time.sleep(1)
+        
 if __name__ == '__main__':
     plt.close('all')
     print 30*"="
@@ -116,47 +130,56 @@ if __name__ == '__main__':
     
     Material.Size.volume = Material.Size.length * Material.Size.width * Material.Size.height
     Material.Size.area = Material.Size.length * Material.Size.width 
-    
 
+#------------------------
+#    FLAGS
+    sauvegarde = True
+    compare_exp = False
+    typeExp = "DisCharge"
+#------------------------
 
-    compare_exp = True
-    typeExp = "Charge"
-    
+#------------------------
+#    Experimental    
     if compare_exp == True :
         if typeExp=="Charge" :
             file_exp='Result_Sorption_brut.csv'
 #            data_exp=loaddata(file_exp,(0,1)) 
-#            data_exp=loaddata(file_exp,(2,3))  # mass flux2
-            data_exp=loaddata(file_exp,(4,5)) # mass flux3 
+#            data_exp=loaddata(file_exp,(2,3))  # mass_flux2
+            data_exp=loaddata(file_exp,(4,5))   # mass_flux3 
 #            data_exp=loaddata(file_exp,(6,7)) 
-            Material.Mass.X_init=0            
+            Material.Mass.X_init=0
+            print "Charge Experiment"            
+
         elif typeExp=="DisCharge" :            
             file_exp='Result_DisCharge.csv'
-            data_exp=loaddata(file_exp,(0,1)) 
+            data_exp=loaddata(file_exp,(0,1)) # mass_flux_discharge
             Material.Mass.X_init=(data_exp[0,-1]*1e-3-Material.Mass.DM)/Material.Size.volume
-            
-        Conditions.Time.final = np.floor(data_exp[-1,0]/Conditions.Time.interval_savet)*Conditions.Time.interval_savet
-            
+            print "Discharge Experiment"
+
+        print "You will compare to experiment : ",file_exp
+        Conditions.Time.final = catch_final_time(data_exp[-1,0],Conditions)
         print "Boundary condition : ",Conditions.BC.physics
-        if Conditions.BC.physics == 'flux' :
-            print "Source of flux in : ",Conditions.BC.values_filename
-            answer=raw_input("Do you want to continue [y/n] : ")            
-            while answer.upper()== "N" :                
-                print ""    
-                print 30*"="
-                print ""   
-                print "Type Ctrl-C to exit"
-                print ""
-                print 30*"="
-                print ""
-                time.sleep(1)
-                
-            
+        print "Source of flux in : ",Conditions.BC.values_filename
+        
+    else :
+        print "Simulation with humidity as input"
+        print "Boundary condition : ",Conditions.BC.physics
+        print "Source of humity vs time: ",Conditions.Gaz.humidity_filename
+        Conditions.Time.final = catch_final_time(Conditions.Gaz.humidity_param[-1,0],Conditions)
+        
+    continuation()
+#------------------------
+
+#------------------------                
+# Simulation            
     x,dx=np.linspace(0,Material.Size.height,Material.Size.number,retstep=True)
     time=np.arange(0,Conditions.Time.final+Conditions.Time.step,Conditions.Time.step)
     
     savetime,SaveX = simul_num(Material,Conditions)
-    
+#------------------------
+
+#------------------------
+# Plots    
     plt.figure(1)
     plt.xlabel(r"Distance $\left[mm\right]$")
     plt.ylabel(r"Water\ Content $\left[kg \cdot m^{-3} \right]$")
@@ -177,18 +200,18 @@ if __name__ == '__main__':
         plt.plot(data_exp[:,0]/3600,(data_exp[:,1]*1e-3-Material.Mass.DM)/Material.Size.volume,ls='None',\
             marker='o',mec='blue',mfc='white',label=r'$\bar{C}_{exp}$')
         
-    plt.plot(savetime/3600,SaveX.mean(axis=1),'k-',linewidth=3,label=r"\bar{C}^{simul}")
+    plt.plot(savetime/3600,SaveX.mean(axis=1),'k-',linewidth=3,label=r"$\bar{C}^{simul}$")
     plt.plot(savetime/3600,SaveX[:,0],'g-',label=r'$C^{simul}_{surf}$')
     plt.plot(savetime/3600,SaveX[:,-1],'r-',label=r'$C^{simul}_{deep}$')
-    
-    
     plt.xlabel(r"Time $\left[h\right]$")
     plt.ylabel(r"Water\ Content $\left[kg \cdot m^{-3}\right]$")
     plt.title(r"Water content vs. time")
     plt.legend()
     plt.grid(True)
+#------------------------
     
-    sauvegarde = True
+#------------------------
+# Sauvegarde en PDF        
     directory="./Resultats/"
     
     if sauvegarde==True :
@@ -198,4 +221,5 @@ if __name__ == '__main__':
         plt.figure(2)
         fname2="Figure_2_"+str(Material.Mass.diffusivity)+".pdf"
         plt.savefig(directory+fname2)
+#------------------------
         

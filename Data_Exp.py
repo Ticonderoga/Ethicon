@@ -107,11 +107,11 @@ def loaddata(filename,columns) :
     ts2=np.reshape(ts2,(-1,2))
     return ts2
 
-def interpdata(ts,timeint,derivation=0) :
+def interpdata(ts,timeint,derivation=0,ws=21) :
     new_value_ts=scinterp.interp1d(ts[:,0],ts[:,1],bounds_error=False,fill_value=np.nan)(timeint)
     index=np.isfinite(new_value_ts)
     ts=np.c_[timeint[index],new_value_ts[index]]
-    mass_flux=smooth(ts[:,1],window_size=21,order=3,deriv=derivation)/np.gradient(ts[:,0])
+    mass_flux=smooth(ts[:,1],window_size=ws,order=3,deriv=derivation)/np.gradient(ts[:,0])
     return mass_flux
 
 
